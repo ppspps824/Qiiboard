@@ -246,9 +246,9 @@ def main():
     with st.sidebar:
         with st.form("info"):
             accsess_token = st.text_input(
-                "Access Token", placeholder="YOUR ACCESS TOKEN"
+                "Access Token", placeholder="Your Access Token"
             )
-            user_name = st.text_input("User Name", placeholder="Qiita User Name")
+            user_name = st.text_input("User Name", placeholder="User Name")
             st.form_submit_button("データ取得")
 
     st.image("logo.png")
