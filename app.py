@@ -212,7 +212,7 @@ def main():
             sort_value_jp = st.selectbox("Sort", options=sort_options.keys())
     
     st.image("logo.png")
-    if user_name:
+    if all([user_name,accsess_token]):
         user_info = get_user_info(accsess_token,user_name)
         if user_info:
             html = f"""
@@ -292,6 +292,8 @@ def main():
                     with cols[2]:
                         show_stocks_total(sdf["stocks_count"].values[0])
                     st.line_chart(likes)
-
+    else:
+        st.info("アクセストークンとユーザー名を入力してください",icon="👈")
+            
 if __name__ == "__main__":
     main()
