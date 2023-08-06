@@ -127,7 +127,7 @@ def show_stocks_total(value):
 def show_comments_total(value):
     create_metric(sline = "Comments",value=value,iconname="fa fa-comment")
 
-@st.cache_data(show_spinner=False)
+
 def pagenation_by_total_likes(item_ids,token=None, query=None):
     df_likes = pd.DataFrame()
     # クエリパラメータの準備
@@ -156,7 +156,12 @@ def pagenation_by_total_likes(item_ids,token=None, query=None):
                     total_count_likes = int(res_likes.headers["Total-Count"])
                     if page_num_likes >= (total_count_likes + 99) // 100:
                         break
-    return df_likes
+    if len(df_likes):
+        df_likes["created_at"]=df_likes["created_at"].str[0:13]+":00:00"
+        df_likes["created_at"]=pd.to_datetime(df_likes["created_at"])
+        df_likes["created_at"]=df_likes["created_at"].dt.strftime('%Y/%m/%d')
+
+    st.session_state.df_likes = df_likes
 
 @st.cache_data(show_spinner=False)
 def pagenation_by_total_count(token=None, query=None):
@@ -208,7 +213,11 @@ def main():
         layout="wide"
     )
     hide_style()
-    # accsess_token = st.secrets["Qiita_API_KEY"]
+
+    if "df_likes" not in st.session_state:
+        st.session_state.df_likes = pd.DataFrame()
+
+
     sort_options = {
         "📝作成日": "created_at",
         "👍いいね数": "likes_count",
@@ -275,17 +284,10 @@ def main():
 
             show_wordcloud(wordcloud_text)
 
-            if st.button("記事ごとの情報を取得する",help="取得に時間がかかる場合があります。"):
-                df_likes = pagenation_by_total_likes(
-                token=accsess_token, query=f"user:{user_name}",item_ids=item_ids
-            )
+            if len(st.session_state.df_likes):
+                df_likes = st.session_state.df_likes
                 st.write("## Details")
                 sort_value_jp = st.selectbox("Sort", options=sort_options.keys())
-                if len(df_likes):
-                    df_likes["created_at"]=df_likes["created_at"].str[0:13]+":00:00"
-                    df_likes["created_at"]=pd.to_datetime(df_likes["created_at"])
-                    df_likes["created_at"]=df_likes["created_at"].dt.strftime('%Y/%m/%d')
-
 
                 for id, sdf in df_total_count.sort_values(
                     sort_options[sort_value_jp], ascending=False
@@ -311,6 +313,9 @@ def main():
                         with cols[3]:
                             show_comments_total(sdf["comments_count"].values[0])
                         st.line_chart(likes)
+            else:
+                st.button("記事ごとの情報を取得する",help="取得に時間がかかる場合があります。",on_click=pagenation_by_total_likes,args=(item_ids,accsess_token, f"user:{user_name}",))
+
 
     else:
         st.info("アクセストークンとユーザー名を入力してください。\n\n[アクセストークンの取得方法](https://github.com/ppspps824/Qiiboard)",icon="👈")
