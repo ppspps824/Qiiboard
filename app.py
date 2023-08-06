@@ -293,7 +293,7 @@ def main():
                         show_stocks_total(sdf["stocks_count"].values[0])
                     st.line_chart(likes)
     else:
-        st.info("アクセストークンとユーザー名を入力してください。\n[アクセストークンの取得方法]("https://github.com/ppspps824/Qiiboard")",icon="👈")
+        st.info("アクセストークンとユーザー名を入力してください。\n[アクセストークンの取得方法]('https://github.com/ppspps824/Qiiboard')",icon="👈")
             
 if __name__ == "__main__":
     main()
