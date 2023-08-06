@@ -227,6 +227,12 @@ def get_user_info(token, user_name):
     return body
 
 
+@st.cache_data(show_spinner=False)
+def convert_df(df):
+    # IMPORTANT: Cache the conversion to prevent computation on every rerun
+    return df.to_csv().encode("utf-8")
+
+
 def main():
     st.set_page_config(
         page_title="Qiiboard", page_icon=Image.open("favicon.png"), layout="wide"
@@ -234,6 +240,7 @@ def main():
     hide_style()
 
     if "df_likes" not in st.session_state:
+        st.session_state.df_total_count = pd.DataFrame()
         st.session_state.df_likes = pd.DataFrame()
 
     sort_options = {
@@ -250,6 +257,8 @@ def main():
             )
             user_name = st.text_input("User Name", placeholder="User Name")
             st.form_submit_button("データ取得")
+
+        dl_place = st.container()
 
     st.image("logo.png")
     if all([user_name, accsess_token]):
@@ -273,9 +282,10 @@ def main():
             st.write("---")
             st.write(html, unsafe_allow_html=True)
             # Total-Countヘッダを利用して、「QiitaAPI」タグの記事を取得
-            df_total_count, item_ids = pagenation_by_total_count(
+            st.session_state.df_total_count, item_ids = pagenation_by_total_count(
                 token=accsess_token, query=f"user:{user_name}"
             )
+            df_total_count = st.session_state.df_total_count
             df_total_count["created_at"] = pd.to_datetime(df_total_count["created_at"])
             df_total_count["created_at"] = df_total_count["created_at"].dt.strftime(
                 "%Y/%m/%d %H:%M:%S"
@@ -305,6 +315,14 @@ def main():
                 show_comments_total(comments_total)
 
             show_wordcloud(wordcloud_text)
+
+            with dl_place:
+                st.download_button(
+                    "記事一覧データを保存(CSV)",
+                    data=convert_df(st.session_state.df_total_count),
+                    file_name="qiiboard_articles.csv",
+                    mime="text/csv",
+                )
 
             if len(st.session_state.df_likes):
                 df_likes = st.session_state.df_likes
@@ -342,6 +360,14 @@ def main():
                         with cols[3]:
                             show_comments_total(sdf["comments_count"].values[0])
                         st.line_chart(likes)
+
+                with dl_place:
+                    st.download_button(
+                        "いいねデータを保存(CSV)",
+                        data=convert_df(st.session_state.df_likes),
+                        file_name="qiiboard_likes.csv",
+                        mime="text/csv",
+                    )
             else:
                 if st.button("記事ごとの情報を取得する", help="取得に時間がかかる場合があります。"):
                     pagenation_by_total_likes(
