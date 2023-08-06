@@ -46,7 +46,7 @@ def hide_style():
                     """
     st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
-@st.cache_data()
+@st.cache_data(show_spinner=False)
 def get_word_str(text):
     word_list=[]
     t = Tokenizer()
@@ -58,18 +58,19 @@ def get_word_str(text):
     split_text=" ".join(word_list)
     return split_text
 
-@st.cache_data(experimental_allow_widgets=True)
+@st.cache_data(experimental_allow_widgets=True,show_spinner=False)
 def show_wordcloud(text):
-    # Create some sample text
-    split_text = get_word_str(text)
+    with st.spinner("Wordcloud作成中・・・"):
+        # Create some sample text
+        split_text = get_word_str(text)
 
-    # Create and generate a word cloud image:
-    wordcloud = WordCloud(font_path="ipaexg.ttf",background_color='white').generate(split_text)
+        # Create and generate a word cloud image:
+        wordcloud = WordCloud(font_path="ipaexg.ttf",background_color='white').generate(split_text)
 
-    # Display the generated image:
-    plt.imshow(wordcloud, interpolation='bilinear')
-    plt.axis("off") 
-    st.pyplot(plt)
+        # Display the generated image:
+        plt.imshow(wordcloud, interpolation='bilinear')
+        plt.axis("off") 
+        st.pyplot(plt)
 
 # クエリパラメータを組み立てる(1ページ100件固定)
 def prepare_parameter(query):
@@ -123,59 +124,70 @@ def show_likes_total(value):
 def show_stocks_total(value):
     create_metric(sline = "Stocks",value=value,iconname="fa fa-bookmark")
 
-@st.cache_data()
+def show_comments_total(value):
+    create_metric(sline = "Comments",value=value,iconname="fa fa-comment")
+
+@st.cache_data(show_spinner=False)
+def pagenation_by_total_likes(item_ids,token=None, query=None):
+    df_likes = pd.DataFrame()
+    # クエリパラメータの準備
+    params = prepare_parameter(query)
+    # アクセストークンが指定された場合に付与
+    req_headers = prepare_headers(token)
+
+    for num,item_id in enumerate(item_ids):
+        with st.spinner(f"記事ごとの情報を取得中：{num+1}/{len(item_ids)}"):
+            for page_num_likes in range(1, 101):
+                params["page"] = str(page_num_likes)
+                url_likes = (
+                    f"https://qiita.com/api/v2/items/{item_id}/likes?"
+                    + urllib.parse.urlencode(params)
+                )
+
+                req_likes = urllib.request.Request(url_likes, headers=req_headers)
+                
+                with urllib.request.urlopen(req_likes) as res_likes:
+                    # DataFrameに記事情報を格納
+                    df = pd.json_normalize(json.load(res_likes))
+                    df["id"] = item_id
+                    df_likes = pd.concat([df_likes, df])
+                    print("Page: " + str(page_num_likes))
+                    # Total-Countヘッダの値から最後のページまで取得したかを判断
+                    total_count_likes = int(res_likes.headers["Total-Count"])
+                    if page_num_likes >= (total_count_likes + 99) // 100:
+                        break
+    return df_likes
+
+@st.cache_data(show_spinner=False)
 def pagenation_by_total_count(token=None, query=None):
     df_ret = pd.DataFrame()
-    df_likes = pd.DataFrame()
-
+    
     # クエリパラメータの準備
     params = prepare_parameter(query)
     # アクセストークンが指定された場合に付与
     req_headers = prepare_headers(token)
 
     for page_num in range(1, 101):
-        params["page"] = str(page_num)
-        url = "https://qiita.com/api/v2/items?" + urllib.parse.urlencode(params)
+        with st.spinner(f"記事情報取得中：{page_num}"):
+            params["page"] = str(page_num)
+            url = "https://qiita.com/api/v2/items?" + urllib.parse.urlencode(params)
 
-        req = urllib.request.Request(url, headers=req_headers)
-        with urllib.request.urlopen(req) as res:
-            body = json.load(res)
-            # DataFrameに記事情報を格納
-            df = pd.json_normalize(body)
-            df_ret = pd.concat([df_ret, df])
-            print("Page: " + str(page_num))
-            # Total-Countヘッダの値から最後のページまで取得したかを判断
-            total_count = int(res.headers["Total-Count"])
-            if page_num >= (total_count + 99) // 100:
-                break
-
-    item_ids = df_ret["id"].to_list()
-    
-    for item_id in item_ids:
-        for page_num_likes in range(1, 101):
-            params["page"] = str(page_num_likes)
-            url_likes = (
-                f"https://qiita.com/api/v2/items/{item_id}/likes?"
-                + urllib.parse.urlencode(params)
-            )
-
-            req_likes = urllib.request.Request(url_likes, headers=req_headers)
-            
-
-            with urllib.request.urlopen(req_likes) as res_likes:
+            req = urllib.request.Request(url, headers=req_headers)
+            with urllib.request.urlopen(req) as res:
+                body = json.load(res)
                 # DataFrameに記事情報を格納
-                df = pd.json_normalize(json.load(res_likes))
-                df["id"] = item_id
-                df_likes = pd.concat([df_likes, df])
-                print("Page: " + str(page_num_likes))
+                df = pd.json_normalize(body)
+                df_ret = pd.concat([df_ret, df])
+                print("Page: " + str(page_num))
                 # Total-Countヘッダの値から最後のページまで取得したかを判断
-                total_count_likes = int(res_likes.headers["Total-Count"])
-                if page_num_likes >= (total_count_likes + 99) // 100:
+                total_count = int(res.headers["Total-Count"])
+                if page_num >= (total_count + 99) // 100:
                     break
+    item_ids = df_ret["id"].to_list()
             
-    return df_ret, df_likes
+    return df_ret, item_ids
 
-@st.cache_data()
+@st.cache_data(show_spinner=False)
 def get_user_info(token,user_name):
     url = f"https://qiita.com/api/v2/users/{urllib.parse.quote(user_name)}"
     req_headers = prepare_headers(token)
@@ -187,7 +199,6 @@ def get_user_info(token,user_name):
     except urllib.error.HTTPError as err:
         st.error("ユーザ情報を取得できませんでした。")
         st.stop()
-
     return body
 
 def main():
@@ -206,36 +217,34 @@ def main():
         "💬コメント数": "comments_count",
     }
     with st.sidebar:   
-        accsess_token = st.text_input("Access Token",placeholder="YOUR ACCESS TOKEN")
-        user_name = st.text_input("User Name",placeholder="Qiita User Name")
-        if user_name:
-            sort_value_jp = st.selectbox("Sort", options=sort_options.keys())
+        with st.form("info"):
+            accsess_token = st.text_input("Access Token",placeholder="YOUR ACCESS TOKEN")
+            user_name = st.text_input("User Name",placeholder="Qiita User Name")
+            st.form_submit_button("データ取得")
     
     st.image("logo.png")
     if all([user_name,accsess_token]):
-        user_info = get_user_info(accsess_token,user_name)
-        if user_info:
+        if user_info:=get_user_info(accsess_token,user_name):
             html = f"""
+            <style>
+            .avatar {{
+            vertical-align: middle;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            }}  
+            </style>
 
-    <style>
-    .avatar {{
-    vertical-align: middle;
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    }}  
-    </style>
-
-    <h2>
-    <a href="https://qiita.com/{user_name}"><img src="{user_info['profile_image_url']}" alt="Avatar" class="avatar"></a>
-    {user_name}
-    </h2>
-    """
+            <h2>
+            <a href="https://qiita.com/{user_name}"><img src="{user_info['profile_image_url']}" alt="Avatar" class="avatar"></a>
+            {user_name}
+            </h2>
+            """
             
             st.write("---")
             st.write(html,unsafe_allow_html=True)
             # Total-Countヘッダを利用して、「QiitaAPI」タグの記事を取得
-            df_total_count, df_likes = pagenation_by_total_count(
+            df_total_count, item_ids = pagenation_by_total_count(
                 token=accsess_token, query=f"user:{user_name}"
             )
             df_total_count["created_at"] =pd.to_datetime(df_total_count["created_at"])
@@ -250,8 +259,9 @@ def main():
             view_total=f'{df_total_count["page_views_count"].sum():,}'
             likes_total=f'{df_total_count["likes_count"].sum():,}'
             stocks_total=f'{df_total_count["stocks_count"].sum():,}'
+            comments_total=f'{df_total_count["comments_count"].sum():,}'
 
-            cols=st.columns(4)
+            cols=st.columns(5)
             with cols[0]:
                 show_articles(articles)
             with cols[1]:
@@ -260,38 +270,48 @@ def main():
                 show_likes_total(likes_total)
             with cols[3]:
                 show_stocks_total(stocks_total)
+            with cols[4]:
+                show_comments_total(comments_total)
 
             show_wordcloud(wordcloud_text)
 
-            st.write("## Details")
-            if len(df_likes):
-                df_likes["created_at"]=df_likes["created_at"].str[0:13]+":00:00"
-                df_likes["created_at"]=pd.to_datetime(df_likes["created_at"])
-                df_likes["created_at"]=df_likes["created_at"].dt.strftime('%Y/%m/%d')
-
-
-            for id, sdf in df_total_count.sort_values(
-                sort_options[sort_value_jp], ascending=False
-            ).groupby("id", sort=False):
-                likes=pd.DataFrame()
-
+            if st.button("記事ごとの情報を取得する",help="取得に時間がかかる場合があります。"):
+                df_likes = pagenation_by_total_likes(
+                token=accsess_token, query=f"user:{user_name}",item_ids=item_ids
+            )
+                st.write("## Details")
+                sort_value_jp = st.selectbox("Sort", options=sort_options.keys())
                 if len(df_likes):
-                    likes = df_likes[df_likes["id"]==id][["created_at","id"]].groupby("created_at").count()
-                    likes["likes"] = likes["id"].cumsum()
-                    likes=likes.drop("id",axis=1)
+                    df_likes["created_at"]=df_likes["created_at"].str[0:13]+":00:00"
+                    df_likes["created_at"]=pd.to_datetime(df_likes["created_at"])
+                    df_likes["created_at"]=df_likes["created_at"].dt.strftime('%Y/%m/%d')
 
-                title=sdf["title"].values[0]
-                title_caption = sdf[sort_options[sort_value_jp]].values[0]
-                with st.expander(f"【{sort_value_jp} / {title_caption}】\t{title} "):
-                    st.write(f'<a href="{sdf["url"].values[0]}">{title}</a>',unsafe_allow_html=True)
-                    cols=st.columns(4)
-                    with cols[0]:
-                        show_view_total(sdf["page_views_count"].values[0])
-                    with cols[1]:
-                        show_likes_total(sdf["likes_count"].values[0])
-                    with cols[2]:
-                        show_stocks_total(sdf["stocks_count"].values[0])
-                    st.line_chart(likes)
+
+                for id, sdf in df_total_count.sort_values(
+                    sort_options[sort_value_jp], ascending=False
+                ).groupby("id", sort=False):
+                    likes=pd.DataFrame()
+
+                    if len(df_likes):
+                        likes = df_likes[df_likes["id"]==id][["created_at","id"]].groupby("created_at").count()
+                        likes["likes"] = likes["id"].cumsum()
+                        likes=likes.drop("id",axis=1)
+
+                    title=sdf["title"].values[0]
+                    title_caption = sdf[sort_options[sort_value_jp]].values[0]
+                    with st.expander(f"【{sort_value_jp} / {title_caption}】\t{title} "):
+                        st.write(f'<a href="{sdf["url"].values[0]}">{title}</a>',unsafe_allow_html=True)
+                        cols=st.columns(4)
+                        with cols[0]:
+                            show_view_total(sdf["page_views_count"].values[0])
+                        with cols[1]:
+                            show_likes_total(sdf["likes_count"].values[0])
+                        with cols[2]:
+                            show_stocks_total(sdf["stocks_count"].values[0])
+                        with cols[3]:
+                            show_comments_total(sdf["comments_count"].values[0])
+                        st.line_chart(likes)
+
     else:
         st.info("アクセストークンとユーザー名を入力してください。\n\n[アクセストークンの取得方法](https://github.com/ppspps824/Qiiboard)",icon="👈")
             
