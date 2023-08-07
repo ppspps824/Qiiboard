@@ -250,18 +250,28 @@ def main():
         "👀閲覧数": "page_views_count",
         "💬コメント数": "comments_count",
     }
+
     with st.sidebar:
         with st.form("info"):
-            accsess_token = st.text_input(
-                "Access Token", placeholder="Your Access Token"
-            )
             user_name = st.text_input("User Name", placeholder="User Name")
             st.form_submit_button("データ取得")
 
+        accsess_token = st.text_input(
+            "独自のAccess Tokenを利用する",
+            placeholder="Your Access Token",
+            help="利用制限に引っかかっている場合、独自のアクセストークンを利用できます。",
+        )
+        st.write(
+            "[アクセストークンの取得方法](https://github.com/ppspps824/Qiiboard#%E3%82%A2%E3%82%AF%E3%82%BB%E3%82%B9%E3%83%88%E3%83%BC%E3%82%AF%E3%83%B3%E3%81%AE%E5%8F%96%E5%BE%97%E6%96%B9%E6%B3%95)"
+        )
+
         dl_place = st.container()
 
+    if not accsess_token:
+        accsess_token = st.secrets["QIITA_API_ACCESS_TOKEN"]
+
     st.image("logo.png")
-    if all([user_name, accsess_token]):
+    if user_name:
         if user_info := get_user_info(accsess_token, user_name):
             html = f"""
             <style>
@@ -317,6 +327,7 @@ def main():
             show_wordcloud(wordcloud_text)
 
             with dl_place:
+                st.write("---")
                 st.download_button(
                     "記事一覧データを保存(CSV)",
                     data=convert_df(st.session_state.df_total_count),
@@ -377,10 +388,8 @@ def main():
 
     else:
         st.info(
-            "アクセストークンとユーザー名を入力してください。\n\n[アクセストークンの取得方法](https://github.com/ppspps824/Qiiboard#%E3%82%A2%E3%82%AF%E3%82%BB%E3%82%B9%E3%83%88%E3%83%BC%E3%82%AF%E3%83%B3%E3%81%AE%E5%8F%96%E5%BE%97%E6%96%B9%E6%B3%95)",
+            "ユーザー名を入力してください。",
             icon="👈",
         )
-
-
 if __name__ == "__main__":
     main()
