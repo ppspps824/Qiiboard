@@ -255,15 +255,15 @@ def main():
         with st.form("info"):
             user_name = st.text_input("User Name", placeholder="User Name")
             st.form_submit_button("データ取得")
-
-        accsess_token = st.text_input(
-            "独自のAccess Tokenを利用する",
-            placeholder="Your Access Token",
-            help="利用制限に引っかかっている場合、独自のアクセストークンを利用できます。",
-        )
-        st.write(
-            "[アクセストークンの取得方法](https://github.com/ppspps824/Qiiboard#%E3%82%A2%E3%82%AF%E3%82%BB%E3%82%B9%E3%83%88%E3%83%BC%E3%82%AF%E3%83%B3%E3%81%AE%E5%8F%96%E5%BE%97%E6%96%B9%E6%B3%95)"
-        )
+        with st.expander("独自のAccess Tokenを利用する"):
+            accsess_token = st.text_input(
+                "独自のAccess Tokenを利用する",
+                placeholder="Your Access Token",
+                help="利用制限に引っかかっている場合、独自のアクセストークンを利用できます。",
+            )
+            st.write(
+                "[アクセストークンの取得方法](https://github.com/ppspps824/Qiiboard#%E3%82%A2%E3%82%AF%E3%82%BB%E3%82%B9%E3%83%88%E3%83%BC%E3%82%AF%E3%83%B3%E3%81%AE%E5%8F%96%E5%BE%97%E6%96%B9%E6%B3%95)"
+            )
 
         dl_place = st.container()
 
