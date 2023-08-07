@@ -243,14 +243,6 @@ def main():
         st.session_state.df_total_count = pd.DataFrame()
         st.session_state.df_likes = pd.DataFrame()
 
-    sort_options = {
-        "📝作成日": "created_at",
-        "👍いいね数": "likes_count",
-        "📚ストック数": "stocks_count",
-        "👀閲覧数": "page_views_count",
-        "💬コメント数": "comments_count",
-    }
-
     with st.sidebar:
         with st.form("info"):
             user_name = st.text_input("User Name", placeholder="User Name")
@@ -259,7 +251,7 @@ def main():
             accsess_token = st.text_input(
                 "独自のAccess Tokenを利用する",
                 placeholder="Your Access Token",
-                help="利用制限に引っかかっている場合、独自のアクセストークンを利用できます。",
+                help="総閲覧数を確認したい場合、利用制限に引っかかっている場合、独自のアクセストークンを利用できます。",
             )
             st.write(
                 "[アクセストークンの取得方法](https://github.com/ppspps824/Qiiboard#%E3%82%A2%E3%82%AF%E3%82%BB%E3%82%B9%E3%83%88%E3%83%BC%E3%82%AF%E3%83%B3%E3%81%AE%E5%8F%96%E5%BE%97%E6%96%B9%E6%B3%95)"
@@ -312,17 +304,44 @@ def main():
             stocks_total = f'{df_total_count["stocks_count"].sum():,}'
             comments_total = f'{df_total_count["comments_count"].sum():,}'
 
-            cols = st.columns(5)
-            with cols[0]:
-                show_articles(articles)
-            with cols[1]:
-                show_view_total(view_total)
-            with cols[2]:
-                show_likes_total(likes_total)
-            with cols[3]:
-                show_stocks_total(stocks_total)
-            with cols[4]:
-                show_comments_total(comments_total)
+            if view_total:
+                sort_options = {
+                    "📝作成日": "created_at",
+                    "👍いいね数": "likes_count",
+                    "📚ストック数": "stocks_count",
+                    "👀閲覧数": "page_views_count",
+                    "💬コメント数": "comments_count",
+                }
+            else:
+                sort_options = {
+                    "📝作成日": "created_at",
+                    "👍いいね数": "likes_count",
+                    "📚ストック数": "stocks_count",
+                    "💬コメント数": "comments_count",
+                }
+
+            if view_total:
+                cols = st.columns(5)
+                with cols[0]:
+                    show_articles(articles)
+                with cols[1]:
+                    show_view_total(view_total)
+                with cols[2]:
+                    show_likes_total(likes_total)
+                with cols[3]:
+                    show_stocks_total(stocks_total)
+                with cols[4]:
+                    show_comments_total(comments_total)
+            else:
+                cols = st.columns(4)
+                with cols[0]:
+                    show_articles(articles)
+                with cols[1]:
+                    show_likes_total(likes_total)
+                with cols[2]:
+                    show_stocks_total(stocks_total)
+                with cols[3]:
+                    show_comments_total(comments_total)
 
             show_wordcloud(wordcloud_text)
 
@@ -361,15 +380,26 @@ def main():
                             f'<a href="{sdf["url"].values[0]}">{title}</a>',
                             unsafe_allow_html=True,
                         )
-                        cols = st.columns(4)
-                        with cols[0]:
-                            show_view_total(sdf["page_views_count"].values[0])
-                        with cols[1]:
-                            show_likes_total(sdf["likes_count"].values[0])
-                        with cols[2]:
-                            show_stocks_total(sdf["stocks_count"].values[0])
-                        with cols[3]:
-                            show_comments_total(sdf["comments_count"].values[0])
+
+                        if view_total:
+                            cols = st.columns(4)
+                            with cols[0]:
+                                show_view_total(sdf["page_views_count"].values[0])
+                            with cols[1]:
+                                show_likes_total(sdf["likes_count"].values[0])
+                            with cols[2]:
+                                show_stocks_total(sdf["stocks_count"].values[0])
+                            with cols[3]:
+                                show_comments_total(sdf["comments_count"].values[0])
+                        else:
+                            cols = st.columns(3)
+                            with cols[0]:
+                                show_likes_total(sdf["likes_count"].values[0])
+                            with cols[1]:
+                                show_stocks_total(sdf["stocks_count"].values[0])
+                            with cols[2]:
+                                show_comments_total(sdf["comments_count"].values[0])
+
                         st.line_chart(likes)
 
                 with dl_place:
