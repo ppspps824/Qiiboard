@@ -304,7 +304,7 @@ def main():
             stocks_total = f'{df_total_count["stocks_count"].sum():,}'
             comments_total = f'{df_total_count["comments_count"].sum():,}'
 
-            if view_total:
+            if view_total != "0":
                 sort_options = {
                     "📝作成日": "created_at",
                     "👍いいね数": "likes_count",
@@ -320,7 +320,7 @@ def main():
                     "💬コメント数": "comments_count",
                 }
 
-            if view_total:
+            if view_total != "0":
                 cols = st.columns(5)
                 with cols[0]:
                     show_articles(articles)
@@ -381,7 +381,7 @@ def main():
                             unsafe_allow_html=True,
                         )
 
-                        if view_total:
+                        if view_total != "0":
                             cols = st.columns(4)
                             with cols[0]:
                                 show_view_total(sdf["page_views_count"].values[0])
